@@ -79,47 +79,59 @@
   document.addEventListener('mouseenter', () => { ring.style.opacity = '1'; dot.style.opacity = '1'; });
 })();
 
-/* ─── C. HERO VIDEO MOBILE AUTOPLAY & FORCE INLINE PLAYBACK ─── */
-(function initHeroVideo() {
-  const video = document.getElementById('heroVideo');
-  if (!video) return;
+/* ─── C. HERO DUAL-VIDEO BACKGROUND SLIDER & AUTOPLAY ─── */
+(function initHeroVideoSlider() {
+  const slides = document.querySelectorAll('.hero-video-slide');
+  if (!slides.length) return;
 
-  video.muted = true;
-  video.defaultMuted = true;
-  video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-  video.setAttribute('x5-playsinline', '');
-  video.setAttribute('muted', '');
-  video.setAttribute('autoplay', '');
-  video.setAttribute('loop', '');
+  slides.forEach(video => {
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('x5-playsinline', '');
+    video.setAttribute('muted', '');
+    video.setAttribute('autoplay', '');
+    video.setAttribute('loop', '');
+  });
 
   const startPlayback = () => {
-    video.muted = true;
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        video.classList.add('loaded');
-      }).catch(() => {
-        // Autoplay policy blocked initial playback, unlock on first user gesture
-        const unlockPlay = () => {
-          video.muted = true;
-          video.play().then(() => video.classList.add('loaded')).catch(() => {});
+    slides.forEach(video => {
+      video.muted = true;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          video.classList.add('loaded');
+        }).catch(() => {
+          // Autoplay policy blocked initial playback, unlock on first user gesture
+          const unlockPlay = () => {
+            slides.forEach(v => {
+              v.muted = true;
+              v.play().then(() => v.classList.add('loaded')).catch(() => {});
+            });
+            ['touchstart', 'touchend', 'click', 'scroll'].forEach(evt => {
+              window.removeEventListener(evt, unlockPlay, { passive: true });
+            });
+          };
           ['touchstart', 'touchend', 'click', 'scroll'].forEach(evt => {
-            window.removeEventListener(evt, unlockPlay, { passive: true });
+            window.addEventListener(evt, unlockPlay, { passive: true, once: true });
           });
-        };
-        ['touchstart', 'touchend', 'click', 'scroll'].forEach(evt => {
-          window.addEventListener(evt, unlockPlay, { passive: true, once: true });
         });
-      });
-    }
+      }
+    });
   };
 
   startPlayback();
   document.addEventListener('DOMContentLoaded', startPlayback);
   window.addEventListener('load', startPlayback);
-  video.addEventListener('canplay', startPlayback, { once: true });
-  video.addEventListener('loadeddata', () => video.classList.add('loaded'), { once: true });
+
+  // Automatic Smooth Crossfade Slider every 7 seconds
+  let currentSlideIndex = 0;
+  setInterval(() => {
+    slides[currentSlideIndex].classList.remove('active');
+    currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+    slides[currentSlideIndex].classList.add('active');
+  }, 7000);
 })();
 
 /* ─── D. STAGGER-CHILDREN OBSERVER ─── */
@@ -258,15 +270,21 @@ if (canvas) {
 }
 
 /* ── 5. HERO BACKGROUND VIDEO AUDIO TOGGLE ── */
-const heroVideo       = document.getElementById('heroVideo');
+const heroVideos      = document.querySelectorAll('.hero-video-slide');
 const heroAudioToggle = document.getElementById('heroAudioToggle');
 const audioIcon       = document.getElementById('audioIcon');
 const audioLabel      = document.getElementById('audioLabel');
+let isHeroMuted       = true;
 
-if (heroVideo && heroAudioToggle) {
+if (heroVideos.length && heroAudioToggle) {
   heroAudioToggle.addEventListener('click', () => {
-    heroVideo.muted = !heroVideo.muted;
-    if (heroVideo.muted) {
+    isHeroMuted = !isHeroMuted;
+    heroVideos.forEach(v => {
+      v.muted = isHeroMuted;
+      if (!isHeroMuted) v.play().catch(() => {});
+    });
+
+    if (isHeroMuted) {
       if (audioIcon) audioIcon.textContent = '🔇';
       if (audioLabel) audioLabel.textContent = 'Sound Off';
       heroAudioToggle.setAttribute('aria-label', 'Unmute hero video');
@@ -274,8 +292,6 @@ if (heroVideo && heroAudioToggle) {
       if (audioIcon) audioIcon.textContent = '🔊';
       if (audioLabel) audioLabel.textContent = 'Sound On';
       heroAudioToggle.setAttribute('aria-label', 'Mute hero video');
-      // If paused due to browser policies, force play
-      heroVideo.play().catch(() => {});
     }
   });
 }
@@ -453,6 +469,7 @@ document.querySelectorAll('.step-circle').forEach(c => circleObs.observe(c));
 /* ── 11. PORTFOLIO CATEGORY FILTER TABS ── */
 const filterTabs = document.querySelectorAll('.filter-tab-btn');
 const portCards  = document.querySelectorAll('.portfolio-masonry .port-card');
+const portfolioGrid = document.getElementById('portfolioGrid');
 
 filterTabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -463,6 +480,10 @@ filterTabs.forEach(tab => {
       t.setAttribute('aria-selected', String(t === tab));
     });
 
+    if (portfolioGrid) {
+      portfolioGrid.dataset.filtered = filter === 'all' ? 'false' : 'true';
+    }
+
     portCards.forEach(card => {
       const cat = card.dataset.category || '';
       const match = filter === 'all' || cat === filter || (filter === 'films' && card.classList.contains('port-card-yt'));
@@ -470,7 +491,7 @@ filterTabs.forEach(tab => {
       if (match) {
         card.style.display = '';
         card.style.opacity = '0';
-        card.style.transform = 'scale(0.92)';
+        card.style.transform = 'scale(0.94)';
         setTimeout(() => {
           card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
           card.style.opacity = '1';
@@ -479,7 +500,7 @@ filterTabs.forEach(tab => {
       } else {
         card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
         card.style.opacity = '0';
-        card.style.transform = 'scale(0.9)';
+        card.style.transform = 'scale(0.92)';
         setTimeout(() => { card.style.display = 'none'; }, 260);
       }
     });
