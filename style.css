@@ -2182,15 +2182,14 @@ button {
 /* The video element — cover like background-size:cover */
 .hero-video {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
   pointer-events: none;
+  background: #080604;
 }
 
 /* Primary cinematic dark overlay */
@@ -4905,12 +4904,8 @@ body::after {
 
 /* Video fade-in on load */
 .hero-video {
-  opacity: 0;
-  transition: opacity 2s ease;
-}
-
-.hero-video.loaded {
   opacity: 1;
+  transition: opacity 1s ease;
 }
 
 /* ─── 7. SERVICE CARD TOP SHIMMER ─── */

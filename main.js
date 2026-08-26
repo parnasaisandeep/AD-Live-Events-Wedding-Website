@@ -79,19 +79,47 @@
   document.addEventListener('mouseenter', () => { ring.style.opacity = '1'; dot.style.opacity = '1'; });
 })();
 
-/* ─── C. HERO VIDEO FADE-IN ─── */
-(function initVideoFadeIn() {
+/* ─── C. HERO VIDEO MOBILE AUTOPLAY & FORCE INLINE PLAYBACK ─── */
+(function initHeroVideo() {
   const video = document.getElementById('heroVideo');
   if (!video) return;
-  const onReady = () => video.classList.add('loaded');
-  if (video.readyState >= 3) {
-    onReady();
-  } else {
-    video.addEventListener('canplay', onReady, { once: true });
-    video.addEventListener('loadeddata', onReady, { once: true });
-    // Fallback: fade in after 2s regardless
-    setTimeout(onReady, 2000);
-  }
+
+  video.muted = true;
+  video.defaultMuted = true;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  video.setAttribute('x5-playsinline', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('autoplay', '');
+  video.setAttribute('loop', '');
+
+  const startPlayback = () => {
+    video.muted = true;
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        video.classList.add('loaded');
+      }).catch(() => {
+        // Autoplay policy blocked initial playback, unlock on first user gesture
+        const unlockPlay = () => {
+          video.muted = true;
+          video.play().then(() => video.classList.add('loaded')).catch(() => {});
+          ['touchstart', 'touchend', 'click', 'scroll'].forEach(evt => {
+            window.removeEventListener(evt, unlockPlay, { passive: true });
+          });
+        };
+        ['touchstart', 'touchend', 'click', 'scroll'].forEach(evt => {
+          window.addEventListener(evt, unlockPlay, { passive: true, once: true });
+        });
+      });
+    }
+  };
+
+  startPlayback();
+  document.addEventListener('DOMContentLoaded', startPlayback);
+  window.addEventListener('load', startPlayback);
+  video.addEventListener('canplay', startPlayback, { once: true });
+  video.addEventListener('loadeddata', () => video.classList.add('loaded'), { once: true });
 })();
 
 /* ─── D. STAGGER-CHILDREN OBSERVER ─── */
