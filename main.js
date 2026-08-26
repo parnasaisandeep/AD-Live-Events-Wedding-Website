@@ -731,12 +731,11 @@ function initColorGradeSlider() {
 }
 initColorGradeSlider();
 
-/* ── 19. VIDEO SHOWCASE SECTION CLICK HANDLERS & AUTOPLAY ── */
+/* ── 19. VIDEO SHOWCASE SECTION CLICK HANDLERS & HOVER-TO-PLAY ── */
 function initVideoShowcase() {
-  const videoCards = document.querySelectorAll('[data-yt]');
-  
-  videoCards.forEach(card => {
-    // Click and keyboard accessibility to open lightbox with sound
+  // All video cards across the site (click to play in modal with sound)
+  const allVideoCards = document.querySelectorAll('[data-yt]');
+  allVideoCards.forEach(card => {
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       openVideoModal(card.dataset.yt);
@@ -749,45 +748,74 @@ function initVideoShowcase() {
         openVideoModal(card.dataset.yt); 
       }
     });
-
-    // Subtle 3D tilt on mouse move for grid cards
-    if (card.classList.contains('vss-card')) {
-      card.addEventListener('mousemove', (e) => {
-        const rect = card.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = (e.clientX - cx) / (rect.width / 2);
-        const dy = (e.clientY - cy) / (rect.height / 2);
-        card.style.transform = `translateY(-8px) scale(1.02) rotateY(${dx * 4}deg) rotateX(${-dy * 4}deg)`;
-      });
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = '';
-      });
-    }
   });
 
-  // Intersection Observer to trigger background muted autoplay on scroll
-  const bgVideos = document.querySelectorAll('.vss-bg-video');
-  if ('IntersectionObserver' in window) {
-    const videoObserver = new IntersectionObserver((entries, observer) => {
+  // Video Cards (Showcase & Films): Hover to Play Muted, Mouse Leave to Pause/Reset
+  const previewCards = document.querySelectorAll('.vss-card[data-yt], .film-card[data-yt]');
+  previewCards.forEach(card => {
+    const ytId = card.dataset.yt;
+    const videoSlot = card.querySelector('.vss-card-video-slot, .film-video-slot');
+    const iframeClass = card.classList.contains('film-card') ? 'film-hover-iframe' : 'vss-hover-iframe';
+    let hoverTimer = null;
+
+    card.addEventListener('mouseenter', () => {
+      // Small 150ms debounce so rapid mouse passing doesn't trigger unneeded iframes
+      hoverTimer = setTimeout(() => {
+        if (videoSlot && !videoSlot.querySelector('iframe')) {
+          const iframe = document.createElement('iframe');
+          iframe.className = iframeClass;
+          iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&loop=1&playlist=${ytId}`;
+          iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+          iframe.setAttribute('allowfullscreen', 'true');
+          iframe.setAttribute('tabindex', '-1');
+          iframe.setAttribute('aria-hidden', 'true');
+          iframe.title = 'Muted Preview';
+          videoSlot.innerHTML = '';
+          videoSlot.appendChild(iframe);
+          requestAnimationFrame(() => {
+            setTimeout(() => iframe.classList.add('playing'), 50);
+          });
+        }
+      }, 150);
+    });
+
+    card.addEventListener('mouseleave', () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      if (videoSlot) {
+        videoSlot.innerHTML = '';
+      }
+      card.style.transform = '';
+    });
+
+    // Subtle 3D tilt on mouse move
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+      card.style.transform = `translateY(-8px) scale(1.02) rotateY(${dx * 4}deg) rotateX(${-dy * 4}deg)`;
+    });
+  });
+
+  // Featured Hero Video: Intersection Observer for muted background autoplay
+  const heroBgVideo = document.querySelector('.vss-hero .vss-bg-video');
+  if (heroBgVideo && 'IntersectionObserver' in window) {
+    const heroObserver = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const iframe = entry.target;
           if (iframe.dataset.src && !iframe.src) {
             iframe.src = iframe.dataset.src;
-            // Add loaded class after a short delay to allow video to start playing before fading in
             setTimeout(() => {
               iframe.classList.add('loaded');
-            }, 1000); 
+            }, 1000);
             observer.unobserve(iframe);
           }
         }
       });
     }, { rootMargin: '100px' });
-
-    bgVideos.forEach(video => {
-      videoObserver.observe(video);
-    });
+    heroObserver.observe(heroBgVideo);
   }
 }
 initVideoShowcase();
